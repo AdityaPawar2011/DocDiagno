@@ -27,15 +27,7 @@ app.config['TESTING']=True
 
 mysql = MySQL(app)
 
-# Flask-Mail Configuration
-app.config['MAIL_SERVER'] = 'smtp.example.com'  # Change this to your SMTP server
-app.config['MAIL_PORT'] = 587  # Change this to your SMTP server port
-app.config['MAIL_USE_TLS'] = True  # Set to True if your SMTP server requires TLS
-app.config['MAIL_USERNAME'] = 'aditya_d_pawar.moderncoe.edu.in'  # Your email username
-app.config['MAIL_PASSWORD'] = '8788645505@Rutu'  # Your email password
-app.config['MAIL_DEFAULT_SENDER'] = 'aditya_d_pawar.moderncoe.edu.in'  # Your default sender email address
 
-mail = Mail(app)
 @app.route('/index')
 def index():
     return render_template('index.html')
