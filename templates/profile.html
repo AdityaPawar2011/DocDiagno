@@ -1,32 +1,42 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>User Profile</title>
-    <style>
-        body {
-            font-family: 'Arial', sans-serif;
-            background-color: #f0f0f0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-            text-align: center;
-        }
-
-        h2 {
-            color: #333;
-        }
-
-        p {
-            color: #555;
-        }
-    </style>
 </head>
 <body>
-    <h2>Welcome to Your Profile</h2>
-    <p>Hello, {{ user_name }}!</p>
+    <h1>Welcome, {{ session.user_name }}</h1>
+
+    <h2>Heart Framingham Results</h2>
+    {% if heart_fram_results %}
+        <ul>
+            {% for result in heart_fram_results %}
+                <li>Prediction: {{ 'No Heart Disease' if result.prediction == 0 else 'Heart Disease' }} - Date: {{ result.created_at }}</li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>No Heart Framingham results found.</p>
+    {% endif %}
+
+    <h2>Heart Combined Results</h2>
+    {% if heart_combined_results %}
+        <ul>
+            {% for result in heart_combined_results %}
+                <li>Prediction: {{ 'No Heart Disease' if result.prediction == 0 else 'Heart Disease' }} - Date: {{ result.created_at }}</li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>No Heart Combined results found.</p>
+    {% endif %}
+
+    <h2>Diabetes Results</h2>
+    {% if diabetes_results %}
+        <ul>
+            {% for result in diabetes_results %}
+                <li>Prediction: {{ 'No Diabetes' if result.prediction == 0 else 'Diabetes' }} - Date: {{ result.created_at }}</li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>No Diabetes results found.</p>
+    {% endif %}
 </body>
 </html>
