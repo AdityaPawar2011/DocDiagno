@@ -127,6 +127,7 @@ def login():
         if user:
             if bcrypt.check_password_hash(user['password'], password):
                 # Set user information in the session
+                session['user_id'] = user['id']
                 session['user_name'] = user['name']
                 flash('Login successful. Welcome back!', 'success')
                 return redirect(url_for('index'))
@@ -141,52 +142,44 @@ def login():
 
 @app.route('/profile')
 def profile():
-    # Retrieve user information from the session
     user_name = session.get('user_name')
+    user_id = session.get('user_id')
 
-    # Check if user is logged in
-    if user_name:
-        return render_template('profile.html', user_name=user_name)
-    else:
+    if not user_name or not user_id:
         flash('Please log in to access your profile.', 'error')
         return redirect(url_for('login'))
 
-@app.route("/heartfram", methods=['GET','POST'])
+    cur = mysql.connection.cursor()
+
+    # Fetch heart framingham results
+    cur.execute("SELECT * FROM heart_fram_results WHERE user_id = %s ORDER BY created_at DESC", (user_id,))
+    heart_fram_results = cur.fetchall()
+
+    # Fetch heart combined results
+    cur.execute("SELECT * FROM heart_combined_results WHERE user_id = %s ORDER BY created_at DESC", (user_id,))
+    heart_combined_results = cur.fetchall()
+
+    # Fetch diabetes results
+    cur.execute("SELECT * FROM diabetes_results WHERE user_id = %s ORDER BY created_at DESC", (user_id,))
+    diabetes_results = cur.fetchall()
+
+    cur.close()
+
+    return render_template('profile.html', user_name=user_name, heart_fram_results=heart_fram_results, heart_combined_results=heart_combined_results, diabetes_results=diabetes_results)
+
+
+@app.route("/heartfram", methods=['GET', 'POST'])
 def heartfram():
     if request.method == 'POST':
-
         gender = int(request.form['gender'])
-        if gender == 'Male':
-            gender = 1
-        else:
-            gender = 0
-        print(gender)
+        gender = 1 if gender == 'Male' else 0
 
         age = int(request.form['age'])
-        print()
-        smoker = request.form['smoker']
-        if smoker == 'Yes':
-            smoker = 1
-        else:
-            smoker = 0
-
-        print(smoker)
+        smoker = 1 if request.form['smoker'] == 'Yes' else 0
         cigs = int(request.form['cigs'])
-        bp_meds = int(request.form['bp_meds'])
-        if bp_meds == 'Yes':
-            bp_meds = 1
-        else:
-            bp_meds = 0
-        stroke = int(request.form['stroke'])
-        if stroke == 'Yes':
-            stroke = 1
-        else:
-            stroke = 0
-        hyp = int(request.form['hyp'])
-        if hyp == 'Yes':
-            hyp = 1
-        else:
-            hyp = 0
+        bp_meds = 1 if request.form['bp_meds'] == 'Yes' else 0
+        stroke = 1 if request.form['stroke'] == 'Yes' else 0
+        hyp = 1 if request.form['hyp'] == 'Yes' else 0
         dia = 1
         chol = int(request.form['chol'])
         sysBp = int(request.form['sysBp'])
@@ -199,27 +192,33 @@ def heartfram():
 
         prediction = model.predict(np.array([gender, age, smoker, cigs, bp_meds, stroke, hyp, dia, chol, sysBp, diaBp, bmi, rate, glu]).reshape((1, -1)))
         output = round(prediction[0])
-        if output == 0:
-            return render_template('result.html',prediction="Congratulations, you are not affected with heart disease. Have a good diet.!!")
-        else:
-            return render_template('result.html',prediction="Sorry ! It looks like you have been affected with heart disease. Please consult doctore as soon as possible, so your treatment starts soon.".format(output))
 
+        user_id = session.get('user_id')
+        if user_id:
+            cur = mysql.connection.cursor()
+            cur.execute("""
+                INSERT INTO heart_fram_results (user_id, gender, age, smoker, cigs, bp_meds, stroke, hyp, dia, chol, sysBp, diaBp, bmi, rate, glu, prediction)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (user_id, gender, age, smoker, cigs, bp_meds, stroke, hyp, dia, chol, sysBp, diaBp, bmi, rate, glu, output))
+            mysql.connection.commit()
+            cur.close()
+
+        if output == 0:
+            return render_template('result.html', prediction="Congratulations, you are not affected with heart disease. Have a good diet.!!")
+        else:
+            return render_template('result.html', prediction="Sorry ! It looks like you have been affected with heart disease. Please consult doctor as soon as possible, so your treatment starts soon.")
     else:
         return render_template('heartfram.html')
 
 
 
 
-@app.route('/heartcombined', methods=['GET','POST'])
+@app.route('/heartcombined', methods=['GET', 'POST'])
 def heartcombined():
     if request.method == 'POST':
         age = int(request.form['age'])
-        sex = int(request.form['sex'])
-        if sex == 'Male':
-            sex = 1
-        else:
-            sex = 0
-        cpt = int(request.form['cpt'])
+        sex = 1 if request.form['sex'] == 'Male' else 0
+        cpt = request.form['cpt']
         if cpt == "Typical Angina":
             cpt = 0
         elif cpt == "Atypical Angina":
@@ -230,27 +229,18 @@ def heartcombined():
             cpt = 3
         bp = int(request.form['bp'])
         chol = int(request.form['chol'])
-        fbp = int(request.form['fbp'])
-        if fbp == "Fasting Blood Sugar < 120 mg/dl":
-            fbp = 0
-        else:
-            fbp = 1
-        ecg = int(request.form['ecg'])
-        if ecg == "Recting Ecg":
+        fbp = 0 if request.form['fbp'] == "Fasting Blood Sugar < 120 mg/dl" else 1
+        ecg = request.form['ecg']
+        if ecg == "Resting ECG":
             ecg = 0
         elif ecg == "ST-T wave abnormality":
             ecg = 1
         else:
             ecg = 2
-        mhr = int(request.form['mhr'])
         mhr = 220 - age
-        exe_angina = int(request.form['exe_angina'])
-        if cpt == 4:
-            exe_angina = 1
-        else:
-            exe_angina = 0
+        exe_angina = 1 if cpt == 4 else 0
         oldpeak = float(request.form['oldpeak'])
-        slope = int(request.form['slope'])
+        slope = request.form['slope']
         if slope == "Upsloping":
             slope = 1
         elif slope == "Flat":
@@ -258,42 +248,61 @@ def heartcombined():
         else:
             slope = 3
 
-        prediction1 = model1.predict(np.array([age, sex, cpt, bp, chol, fbp, ecg, mhr, exe_angina, oldpeak, slope]).reshape((1,-1)))
+        prediction1 = model1.predict(np.array([age, sex, cpt, bp, chol, fbp, ecg, mhr, exe_angina, oldpeak, slope]).reshape((1, -1)))
         output = round(prediction1[0])
-        if output == 0:
-            return render_template('result.html',prediction="Congratulations, you are not affected with heart disease. Have a good diet.!!")
-        else:
-            return render_template('result.html',prediction="Sorry ! It looks like you have been affected with heart disease. Please consult doctore as soon as possible, so your treatment starts soon.")
 
+        user_id = session.get('user_id')
+        if user_id:
+            cur = mysql.connection.cursor()
+            cur.execute("""
+                INSERT INTO heart_combined_results (user_id, age, sex, cpt, bp, chol, fbp, ecg, mhr, exe_angina, oldpeak, slope, prediction)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (user_id, age, sex, cpt, bp, chol, fbp, ecg, mhr, exe_angina, oldpeak, slope, output))
+            mysql.connection.commit()
+            cur.close()
+
+        if output == 0:
+            return render_template('result.html', prediction="Congratulations, you are not affected with heart disease. Have a good diet.!!")
+        else:
+            return render_template('result.html', prediction="Sorry ! It looks like you have been affected with heart disease. Please consult doctor as soon as possible, so your treatment starts soon.")
     else:
         return render_template('heartcombined.html')
 
-@app.route('/diabetespred', methods=['GET','POST'])
+@app.route('/diabetespred', methods=['GET', 'POST'])
 def diabetespred():
     if request.method == 'POST':
-        Pregnancies = int(request.form['Pregnancies'])
-        Glucose = float(request.form['Glucose'])
-        BloodPressure = float(request.form['BloodPressure'])
-        Skinthickness = float(request.form['Skinthickness'])
-        Insulin = float(request.form['Insulin'])
-        BMI = float(request.form['BMI'])
-        DiabetesPedigreeFunction = float(request.form['DiabetesPedigreeFunction'])
-        Age = int(request.form['Age'])
-        
-        prediction2 = model2.predict(np.array([Pregnancies, Glucose, BloodPressure, Skinthickness, Insulin, BMI, DiabetesPedigreeFunction, Age]).reshape((1,-1)))
-        output = round(prediction2[0])
-        if output == 0:
-            return render_template('result.html',prediction="Congratulations, you are not affected with diabetes. Have a good diet.!!")
-        else:
-            return render_template('result.html',prediction="Sorry ! It looks like you have been affected with heart disease. Please consult doctore as soon as possible, so your treatment starts soon.")
+        pregnancies = int(request.form['Pregnancies'])
+        glucose = float(request.form['Glucose'])
+        blood_pressure = float(request.form['BloodPressure'])
+        skin_thickness = float(request.form['Skinthickness'])
+        insulin = float(request.form['Insulin'])
+        bmi = float(request.form['BMI'])
+        diabetes_pedigree_function = float(request.form['DiabetesPedigreeFunction'])
+        age = int(request.form['Age'])
 
+        prediction2 = model2.predict(np.array([pregnancies, glucose, blood_pressure, skin_thickness, insulin, bmi, diabetes_pedigree_function, age]).reshape((1, -1)))
+        output = round(prediction2[0])
+
+        user_id = session.get('user_id')
+        if user_id:
+            cur = mysql.connection.cursor()
+            cur.execute("""
+                INSERT INTO diabetes_results (user_id, pregnancies, glucose, blood_pressure, skin_thickness, insulin, bmi, diabetes_pedigree_function, age, prediction)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (user_id, pregnancies, glucose, blood_pressure, skin_thickness, insulin, bmi, diabetes_pedigree_function, age, output))
+            mysql.connection.commit()
+            cur.close()
+
+        if output == 0:
+            return render_template('result.html', prediction="Congratulations, you are not affected with diabetes. Have a good diet.!!")
+        else:
+            return render_template('result.html', prediction="Sorry ! It looks like you have been affected with diabetes. Please consult doctor as soon as possible, so your treatment starts soon.")
     else:
         return render_template('diabetes.html')
 
-    
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0',port=5000,debug=True)
+    app.run(debug=True)
 
 
 
