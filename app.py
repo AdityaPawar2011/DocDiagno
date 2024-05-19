@@ -171,16 +171,21 @@ def profile():
 @app.route("/heartfram", methods=['GET', 'POST'])
 def heartfram():
     if request.method == 'POST':
-        gender = int(request.form['gender'])
+        gender = request.form['gender']
         gender = 1 if gender == 'Male' else 0
 
         age = int(request.form['age'])
-        smoker = 1 if request.form['smoker'] == 'Yes' else 0
+        smoker = request.form['smoker']
+        smoker = 1 if smoker == 'Yes' else 0
+
         cigs = int(request.form['cigs'])
-        bp_meds = 1 if request.form['bp_meds'] == 'Yes' else 0
-        stroke = 1 if request.form['stroke'] == 'Yes' else 0
-        hyp = 1 if request.form['hyp'] == 'Yes' else 0
-        dia = 1
+        bp_meds = request.form['bp_meds']
+        bp_meds = 1 if bp_meds == 'Yes' else 0
+        stroke = request.form['stroke']
+        stroke = 1 if stroke == 'Yes' else 0
+        hyp = request.form['hyp']
+        hyp = 1 if hyp == 'Yes' else 0
+        dia = 1  # Assuming diabetes is always yes
         chol = int(request.form['chol'])
         sysBp = int(request.form['sysBp'])
         diaBp = int(request.form['diaBp'])
@@ -203,13 +208,30 @@ def heartfram():
             mysql.connection.commit()
             cur.close()
 
-        if output == 0:
-            return render_template('result.html', prediction="Congratulations, you are not affected with heart disease. Have a good diet.!!")
-        else:
-            return render_template('result.html', prediction="Sorry ! It looks like you have been affected with heart disease. Please consult doctor as soon as possible, so your treatment starts soon.")
+        prediction_message = "Congratulations, you are not affected with heart disease. Have a good diet.!!" if output == 0 else "Sorry! It looks like you have been affected with heart disease. Please consult a doctor as soon as possible, so your treatment starts soon."
+
+        parameters = {
+            'Gender': (gender, (0, 1)),
+            'Age': (age, (0, 100)),
+            'Smoker': (smoker, (0, 1)),
+            'Cigs per Day': (cigs, (0, 30)),
+            'BP Medication': (bp_meds, (0, 1)),
+            'Stroke': (stroke, (0, 1)),
+            'Hypertension': (hyp, (0, 1)),
+            'Diabetes': (dia, (0, 1)),
+            'Cholesterol': (chol, (125, 200)),
+            'Systolic BP': (sysBp, (90, 120)),
+            'Diastolic BP': (diaBp, (60, 80)),
+            'BMI': (bmi, (18.5, 24.9)),
+            'Heart Rate': (rate, (60, 100)),
+            'Glucose': (glu, (70, 140))
+        }
+
+        exceeded_parameters = {key: value for key, value in parameters.items() if value[0] < value[1][0] or value[0] > value[1][1]}
+
+        return render_template('result.html', prediction=prediction_message, exceeded_parameters=exceeded_parameters)
     else:
         return render_template('heartfram.html')
-
 
 
 
@@ -217,36 +239,22 @@ def heartfram():
 def heartcombined():
     if request.method == 'POST':
         age = int(request.form['age'])
-        sex = 1 if request.form['sex'] == 'Male' else 0
+        sex = request.form['sex']
+        sex = 1 if sex == 'Male' else 0
         cpt = request.form['cpt']
-        if cpt == "Typical Angina":
-            cpt = 0
-        elif cpt == "Atypical Angina":
-            cpt = 1
-        elif cpt == "Non-Anginal Pain":
-            cpt = 2
-        else:
-            cpt = 3
+        cpt = {'Typical Angina': 0, 'Atypical Angina': 1, 'Non-Anginal Pain': 2, 'Asymptomatic': 3}.get(cpt, 3)
         bp = int(request.form['bp'])
         chol = int(request.form['chol'])
-        fbp = 0 if request.form['fbp'] == "Fasting Blood Sugar < 120 mg/dl" else 1
+        fbp = request.form['fbp']
+        fbp = 0 if fbp == 'Fasting Blood Sugar < 120 mg/dl' else 1
         ecg = request.form['ecg']
-        if ecg == "Resting ECG":
-            ecg = 0
-        elif ecg == "ST-T wave abnormality":
-            ecg = 1
-        else:
-            ecg = 2
-        mhr = 220 - age
-        exe_angina = 1 if cpt == 4 else 0
+        ecg = {'Resting ECG': 0, 'ST-T wave abnormality': 1, 'Left ventricular hypertrophy': 2}.get(ecg, 0)
+        mhr = int(request.form['mhr'])
+        exe_angina = request.form['exe_angina']
+        exe_angina = 1 if exe_angina == 'Yes' else 0
         oldpeak = float(request.form['oldpeak'])
         slope = request.form['slope']
-        if slope == "Upsloping":
-            slope = 1
-        elif slope == "Flat":
-            slope = 2
-        else:
-            slope = 3
+        slope = {'Upsloping': 1, 'Flat': 2, 'Downsloping': 3}.get(slope, 1)
 
         prediction1 = model1.predict(np.array([age, sex, cpt, bp, chol, fbp, ecg, mhr, exe_angina, oldpeak, slope]).reshape((1, -1)))
         output = round(prediction1[0])
@@ -261,12 +269,31 @@ def heartcombined():
             mysql.connection.commit()
             cur.close()
 
-        if output == 0:
-            return render_template('result.html', prediction="Congratulations, you are not affected with heart disease. Have a good diet.!!")
-        else:
-            return render_template('result.html', prediction="Sorry ! It looks like you have been affected with heart disease. Please consult doctor as soon as possible, so your treatment starts soon.")
+        prediction_message = "Congratulations, you are not affected with heart disease. Have a good diet.!!" if output == 0 else "Sorry! It looks like you have been affected with heart disease. Please consult a doctor as soon as possible, so your treatment starts soon."
+
+        parameters = {
+            'Age': (age, (0, 100)),
+            'Sex': (sex, (0, 1)),
+            'Chest Pain Type': (cpt, (0, 3)),
+            'Blood Pressure': (bp, (80, 120)),
+            'Cholesterol': (chol, (125, 200)),
+            'Fasting Blood Sugar': (fbp, (0, 1)),
+            'Resting ECG': (ecg, (0, 2)),
+            'Maximum Heart Rate': (mhr, (60, 220 - age)),
+            'Exercise Induced Angina': (exe_angina, (0, 1)),
+            'Oldpeak': (oldpeak, (0, 6.2)),
+            'Slope': (slope, (1, 3))
+        }
+
+        exceeded_parameters = {key: value for key, value in parameters.items() if value[0] < value[1][0] or value[0] > value[1][1]}
+
+        return render_template('result.html', prediction=prediction_message, exceeded_parameters=exceeded_parameters)
     else:
         return render_template('heartcombined.html')
+
+
+
+
 
 @app.route('/diabetespred', methods=['GET', 'POST'])
 def diabetespred():
@@ -293,12 +320,26 @@ def diabetespred():
             mysql.connection.commit()
             cur.close()
 
-        if output == 0:
-            return render_template('result.html', prediction="Congratulations, you are not affected with diabetes. Have a good diet.!!")
-        else:
-            return render_template('result.html', prediction="Sorry ! It looks like you have been affected with diabetes. Please consult doctor as soon as possible, so your treatment starts soon.")
+        prediction_message = "Congratulations, you are not affected with diabetes. Have a good diet.!!" if output == 0 else "Sorry! It looks like you have been affected with diabetes. Please consult a doctor as soon as possible, so your treatment starts soon."
+
+        # Create a dictionary of user parameters and their limits
+        parameters = {
+            'Pregnancies': (pregnancies, (0, 10)),
+            'Glucose': (glucose, (70, 140)),
+            'Blood Pressure': (blood_pressure, (80, 120)),
+            'Skin Thickness': (skin_thickness, (10, 50)),
+            'Insulin': (insulin, (16, 166)),
+            'BMI': (bmi, (18.5, 24.9)),
+            'Diabetes Pedigree Function': (diabetes_pedigree_function, (0.0, 2.5)),
+        }
+
+        # Filter parameters that exceed the limits
+        exceeded_parameters = {key: value for key, value in parameters.items() if value[0] < value[1][0] or value[0] > value[1][1]}
+
+        return render_template('result.html', prediction=prediction_message, exceeded_parameters=exceeded_parameters)
     else:
         return render_template('diabetes.html')
+
 
 
 if __name__ == "__main__":
