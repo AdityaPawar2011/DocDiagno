@@ -33,27 +33,29 @@
 
 <h1><b>{{ prediction }}</b></h1>
 
-{% if exceeded_parameters %}
-<table>
-    <thead>
-        <tr>
-            <th>Parameter</th>
-            <th>User Input</th>
-            <th>Normal Range</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for parameter, values in exceeded_parameters.items() %}
-        <tr>
-            <td>{{ parameter }}</td>
-            <td>{{ values[0] }}</td>
-            <td>{{ values[1][0] }} - {{ values[1][1] }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-{% else %}
-<p>No parameters exceeded the normal range.</p>
+{% if prediction != "No significant risk detected. Maintain your healthy lifestyle." %}
+    {% if exceeded_parameters %}
+    <table>
+        <thead>
+            <tr>
+                <th>Parameter</th>
+                <th>User Input</th>
+                <th>Normal Range</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for parameter, values in exceeded_parameters.items() %}
+            <tr>
+                <td>{{ parameter }}</td>
+                <td>{{ values[0] }}</td>
+                <td>{{ values[1][0] }} - {{ values[1][1] }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No parameters exceeded the normal range.</p>
+    {% endif %}
 {% endif %}
 
 </body>
