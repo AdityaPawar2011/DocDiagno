@@ -208,7 +208,7 @@ def heartfram():
             mysql.connection.commit()
             cur.close()
 
-        prediction_message = "No significant risk detected. Maintain your healthy lifestyle." if output == 0 else "Your data indicates a high risk of heart failure/diabetes. Seek medical attention promptly."
+        prediction_message = "No significant risk detected. Maintain your healthy lifestyle." if output == 0 else "Your data indicates a high risk of heart failure. Seek medical attention promptly."
 
         parameters = {
             'Gender': (gender, (0, 1)),
@@ -269,7 +269,7 @@ def heartcombined():
             mysql.connection.commit()
             cur.close()
 
-        prediction_message = "No significant risk detected. Maintain your healthy lifestyle." if output == 0 else "Your data indicates a high risk of heart failure/diabetes. Seek medical attention promptly."
+        prediction_message = "No significant risk detected. Maintain your healthy lifestyle." if output == 0 else "Your data indicates a high risk of heart failure. Seek medical attention promptly."
 
         parameters = {
             'Age': (age, (0, 100)),
@@ -320,7 +320,7 @@ def diabetespred():
             mysql.connection.commit()
             cur.close()
 
-        prediction_message = "No significant risk detected. Maintain your healthy lifestyle." if output == 0 else "Your data indicates a high risk of heart failure/diabetes. Seek medical attention promptly."
+        prediction_message = "No significant risk detected. Maintain your healthy lifestyle." if output == 0 else "Your data indicates a high risk of heart diabetes. Seek medical attention promptly."
 
         # Create a dictionary of user parameters and their limits
         parameters = {
